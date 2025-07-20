@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-# app/controllers/v1/base_controller.rb
-
 module V1
   class BaseController < ApplicationController
     before_action :authenticate_user!

@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-# app/controllers/v1/me_controller.rb
-
 module V1
   class MeController < V1::BaseController
     # GET /v1/me/wallet
