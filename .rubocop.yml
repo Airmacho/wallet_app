@@ -1,0 +1,9 @@
+plugins:
+  - rubocop-rails
+
+AllCops:
+  NewCops: enable
+  SuggestExtensions: false
+
+Style/Documentation:
+  Enabled: false
