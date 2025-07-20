@@ -9,17 +9,18 @@ module Idempotent
 
   IN_PROGRESS_MARKER = 'IN_PROGRESS'
 
-  # TTL for the in-progress marker to prevent permanent locks.
+  # 1 minute TTL: Block duplicate requests out
   IN_PROGRESS_TTL = 1.minute
-  # TTL for the cached result of a successful operation.
+  # 1 hour TTL: Return cached result
   RESULT_TTL = 1.hour
 
-  # ThinkingProcess: The controller layer only ensures the presence of the idempotency key.
-  # The actual validation of idempotency is handled in the service layer.
-  # This allows the idempotency logic to be reused in other non-controller contexts,
-  # like background jobs, test cases, etc.
+  # KEY_POINT: The controller layer only ensures the presence of the idempotency key.
+  #            The actual validation of idempotency is handled in the service layer.
+  #            This allows the idempotency logic to be reused in other non-controller contexts,
+  #            like background jobs, test cases, etc.
+
   def with_idempotency(key, &)
-    validate_idempotency_key(key)
+    raise ArgumentError, 'An idempotency key must be provided for this operation.' if key.blank?
 
     existing_transaction = find_transaction_by_key(key)
     return build_result_from_transaction(existing_transaction) if existing_transaction
@@ -29,10 +30,6 @@ module Idempotent
   end
 
   private
-
-  def validate_idempotency_key(key)
-    raise ArgumentError, 'An idempotency key must be provided for this operation.' if key.blank?
-  end
 
   def build_redis_key(key)
     "#{IDEMPOTENCY_KEY_PREFIX}#{key}"
@@ -78,8 +75,8 @@ module Idempotent
     transactions = Transaction.where(idempotency_key: key)
     return nil if transactions.empty?
 
-    # ThinkingProcess: For transfer operations, prioritize transfer_out transaction
-    # as it is the primary transaction for idempotency purposes
+    # KEY_POINT: For transfer operations, prioritize transfer_out transaction
+    #            as it is the primary transaction for idempotency purposes
     transfer_out = transactions.find { |t| t.transaction_type == 'transfer_out' }
     transfer_out || transactions.first
   end

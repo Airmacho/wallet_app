@@ -1,22 +1,22 @@
 # frozen_string_literal: true
 
-# ThinkingProcess: This model provides core Event Sourcing benefits:
-# - Immutable records (transactions never updated after completion)
-# - Failed operations are recorded with failure reasons in metadata
-# - Complete operation timeline through transaction history
-# - Consistent pattern: all services (deposit/withdraw/transfer) record attempts
-# - Audit trail for compliance and debugging
+# KEY_POINT: This model provides core Event Sourcing benefits:
+#            - Immutable records (transactions never updated after completion)
+#            - Failed operations are recorded with failure reasons in failed_reason field
+#            - Complete operation timeline through transaction history
+#            - Consistent pattern: all services (deposit/withdraw/transfer) record attempts,
+#            - Audit trail for compliance and debugging
 #
-# Pattern used:
-# 1. Create transaction with status: 'pending'
-# 2. Execute business logic
-# 3a. Success -> update status: 'completed'
-# 3b. Failure -> update status: 'failed' + metadata: { failure_reason: "..." }
+# KEY_POINT: Pattern used:
+#             1. Create transaction with status: 'pending'
+#             2. Execute business logic
+#             3a. Success -> update status: 'completed'
+#             3b. Failure -> update status: 'failed' + failed_reason: "error message"
 #
-# Full Event Sourcing not implemented because:
-# - ES best practice uses specialized stores (EventStore, Kafka)
-# - PostgreSQL not optimized for append-only event streams
-# - Current requirements satisfied without full ES overhead
+# KEY_POINT: Full Event Sourcing not implemented because:
+#             - ES best practice uses specialized stores (EventStore, Kafka)
+#             - PostgreSQL not optimized for append-only event streams
+#             - Current requirements satisfied without full ES overhead
 class Transaction < ApplicationRecord
   TRANSACTION_TYPES = %w[deposit withdrawal transfer_in transfer_out].freeze
   STATUSES = %w[pending completed failed].freeze

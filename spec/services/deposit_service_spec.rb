@@ -124,13 +124,13 @@ RSpec.describe DepositService do
 
     context 'when database transaction fails' do
       it 'marks transaction as failed when wallet deposit raises exception' do
-        allow_any_instance_of(Wallet).to receive(:deposit!).and_raise(StandardError, 'Database error')
+        allow_any_instance_of(Wallet).to receive(:deposit!).and_raise(StandardError, 'Insufficient funds')
         service = described_class.new(user: user, amount_cents: amount_cents, idempotency_key: idempotency_key)
 
         result = service.call
 
         expect(result.success?).to be false
-        expect(result.error).to eq('Database error')
+        expect(result.error).to eq('Insufficient funds')
         expect(wallet.reload.balance_cents).to eq(0)
 
         failed_transaction = Transaction.find_by(idempotency_key: idempotency_key)
@@ -138,8 +138,7 @@ RSpec.describe DepositService do
         expect(failed_transaction.status).to eq('failed')
         expect(failed_transaction.transaction_type).to eq('deposit')
         expect(failed_transaction.amount_cents).to eq(amount_cents)
-        expect(failed_transaction.metadata['failure_reason']).to eq('Database error')
-        expect(failed_transaction.metadata['failed_at']).to be_present
+        expect(failed_transaction.failed_reason).to eq('Insufficient funds')
       end
 
       it 'returns failure result when transaction creation fails' do
@@ -155,7 +154,7 @@ RSpec.describe DepositService do
 
     context 'when handling large deposit amounts' do
       it 'processes very large deposits within integer limits' do
-        large_amount = 999_999_999
+        large_amount = 999999999
         service = described_class.new(user: user, amount_cents: large_amount, idempotency_key: idempotency_key)
 
         result = service.call

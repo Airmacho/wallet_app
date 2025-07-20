@@ -11,7 +11,7 @@ RSpec.describe TransferService do
   let(:idempotency_key) { 'transfer-test-key' }
 
   before do
-    from_wallet.deposit!(10_000)
+    from_wallet.deposit!(10000)
   end
 
   describe '#call' do
@@ -142,7 +142,7 @@ RSpec.describe TransferService do
 
         expect(result.success?).to be false
         expect(result.error).to include('Unknown currency')
-        expect(from_wallet.reload.balance_cents).to eq(10_000)
+        expect(from_wallet.reload.balance_cents).to eq(10000)
         expect(to_wallet.reload.balance_cents).to eq(0)
       end
     end
@@ -237,7 +237,7 @@ RSpec.describe TransferService do
         )
 
         expect { service.call }.to raise_error(ArgumentError, 'Amount must be positive')
-        expect(from_wallet.reload.balance_cents).to eq(10_000)
+        expect(from_wallet.reload.balance_cents).to eq(10000)
         expect(to_wallet.reload.balance_cents).to eq(0)
       end
 
@@ -250,7 +250,7 @@ RSpec.describe TransferService do
         )
 
         expect { service.call }.to raise_error(ArgumentError, 'Amount must be positive')
-        expect(from_wallet.reload.balance_cents).to eq(10_000)
+        expect(from_wallet.reload.balance_cents).to eq(10000)
         expect(to_wallet.reload.balance_cents).to eq(0)
       end
 
@@ -263,7 +263,7 @@ RSpec.describe TransferService do
         )
 
         expect { service.call }.to raise_error(ArgumentError, 'Cannot transfer to self')
-        expect(from_wallet.reload.balance_cents).to eq(10_000)
+        expect(from_wallet.reload.balance_cents).to eq(10000)
       end
 
       it 'rejects non_integer transfer amounts' do
@@ -275,7 +275,7 @@ RSpec.describe TransferService do
         )
 
         expect { service.call }.to raise_error(ArgumentError, 'Amount must be positive')
-        expect(from_wallet.reload.balance_cents).to eq(10_000)
+        expect(from_wallet.reload.balance_cents).to eq(10000)
         expect(to_wallet.reload.balance_cents).to eq(0)
       end
 
@@ -288,7 +288,7 @@ RSpec.describe TransferService do
         )
 
         expect { service.call }.to raise_error(ArgumentError, 'Amount must be positive')
-        expect(from_wallet.reload.balance_cents).to eq(10_000)
+        expect(from_wallet.reload.balance_cents).to eq(10000)
         expect(to_wallet.reload.balance_cents).to eq(0)
       end
 
@@ -301,14 +301,14 @@ RSpec.describe TransferService do
         )
 
         expect { service.call }.to raise_error(ArgumentError, 'Amount must be positive')
-        expect(from_wallet.reload.balance_cents).to eq(10_000)
+        expect(from_wallet.reload.balance_cents).to eq(10000)
         expect(to_wallet.reload.balance_cents).to eq(0)
       end
     end
 
     context 'when database transaction fails' do
       it 'returns failure result when wallet operations raise exception' do
-        allow_any_instance_of(Wallet).to receive(:withdraw!).and_raise(StandardError, 'Database error')
+        allow_any_instance_of(Wallet).to receive(:withdraw!).and_raise(StandardError, 'Insufficient funds')
         service = described_class.new(
           from_user: from_user,
           to_user: to_user,
@@ -319,13 +319,13 @@ RSpec.describe TransferService do
         result = service.call
 
         expect(result.success?).to be false
-        expect(result.error).to eq('Database error')
-        expect(from_wallet.reload.balance_cents).to eq(10_000)
+        expect(result.error).to eq('Insufficient funds')
+        expect(from_wallet.reload.balance_cents).to eq(10000)
         expect(to_wallet.reload.balance_cents).to eq(0)
       end
 
       it 'returns failure result when wallet operations raise exception' do
-        allow_any_instance_of(Wallet).to receive(:withdraw!).and_raise(StandardError, 'Database error')
+        allow_any_instance_of(Wallet).to receive(:withdraw!).and_raise(StandardError, 'Insufficient funds')
         service = described_class.new(
           from_user: from_user,
           to_user: to_user,
@@ -336,20 +336,20 @@ RSpec.describe TransferService do
         result = service.call
 
         expect(result.success?).to be false
-        expect(result.error).to eq('Database error')
-        expect(from_wallet.reload.balance_cents).to eq(10_000)
+        expect(result.error).to eq('Insufficient funds')
+        expect(from_wallet.reload.balance_cents).to eq(10000)
         expect(to_wallet.reload.balance_cents).to eq(0)
 
         failed_transaction = from_wallet.transactions.find_by(idempotency_key: idempotency_key)
         expect(failed_transaction.status).to eq('failed')
-        expect(failed_transaction.metadata['failure_reason']).to eq('Database error')
+        expect(failed_transaction.failed_reason).to eq('Insufficient funds')
       end
     end
 
     context 'when handling large transfer amounts' do
       it 'processes large transfers within available balance' do
-        from_wallet.update!(balance_cents: 1_000_000_000)
-        large_amount = 999_999_999
+        from_wallet.update!(balance_cents: 1000000000)
+        large_amount = 999999999
         service = described_class.new(
           from_user: from_user,
           to_user: to_user,
@@ -360,7 +360,7 @@ RSpec.describe TransferService do
         result = service.call
 
         expect(result.success?).to be true
-        expect(from_wallet.reload.balance_cents).to eq(1_000_000_000 - large_amount)
+        expect(from_wallet.reload.balance_cents).to eq(1000000000 - large_amount)
         expect(to_wallet.reload.balance_cents).to eq(large_amount)
       end
     end
@@ -370,7 +370,7 @@ RSpec.describe TransferService do
         other_user = create(:user)
         other_user.wallet.deposit!(5000)
 
-        # Create transfers between the same wallets in different directions
+        # KEY_POINT: Create transfers between the same wallets in different directions to simulate circular deadlocks
         service1 = described_class.new(
           from_user: from_user,
           to_user: other_user,
@@ -432,11 +432,11 @@ RSpec.describe TransferService do
         failed_transaction = from_wallet.transactions.find_by(idempotency_key: idempotency_key)
         expect(failed_transaction).to be_present
         expect(failed_transaction.status).to eq('failed')
-        expect(failed_transaction.metadata['failure_reason']).to be_present
+        expect(failed_transaction.failed_reason).to be_present
 
         expect(to_wallet.transactions.where(idempotency_key: idempotency_key)).to be_empty
 
-        expect(from_wallet.reload.balance_cents).to eq(10_000)
+        expect(from_wallet.reload.balance_cents).to eq(10000)
         expect(to_wallet.reload.balance_cents).to eq(0)
       end
     end

@@ -25,6 +25,7 @@ module V1
     #     "amount_cents": 10000,
     #     "currency": "USD",
     #     "status": "completed",
+    #     "failed_reason": "Insufficient funds",
     #     "created_at": "2021-01-01T00:00:00Z"
     #   }
     # ]

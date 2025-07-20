@@ -21,7 +21,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_07_17_212053) do
     t.string "currency", default: "USD", null: false
     t.string "status", default: "pending", null: false
     t.string "idempotency_key"
-    t.jsonb "metadata"
+    t.string "failed_reason"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["created_at"], name: "index_transactions_on_created_at"

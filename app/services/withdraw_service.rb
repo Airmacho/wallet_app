@@ -50,7 +50,7 @@ class WithdrawService
     rescue StandardError => e
       transaction.update!(
         status: 'failed',
-        metadata: { failure_reason: e.message, failed_at: Time.current }
+        failed_reason: e.message
       )
       ServiceResult.new(success: false, error: e.message)
     end

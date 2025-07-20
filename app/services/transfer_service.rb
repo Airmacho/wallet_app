@@ -24,6 +24,7 @@ class TransferService
   def perform_transfer
     from_wallet = @from_user.wallet
 
+    # KEY_POINT: Create transfer_out transaction as the primary transaction for auditing purposes
     transfer_out_transaction = Transaction.create!(
       wallet: from_wallet,
       transaction_type: 'transfer_out',
@@ -35,11 +36,11 @@ class TransferService
 
     begin
       ActiveRecord::Base.transaction do
-        # ThinkingProcess: Lock wallets in a consistent order to prevent circular deadlocks
+        # KEY_POINT: Lock wallets in a consistent order to prevent circular deadlocks
         wallets = [@from_user.wallet, @to_user.wallet].sort_by(&:id)
         wallets.each(&:lock!)
 
-        # ThinkingProcess: Re-fetch wallets after locking to ensure we have the latest state
+        # KEY_POINT: Re-fetch wallets after locking to ensure we have the latest state
         from_wallet = @from_user.wallet.reload
         to_wallet = @to_user.wallet.reload
 
@@ -48,7 +49,6 @@ class TransferService
         from_wallet.withdraw!(@amount_cents)
         to_wallet.deposit!(converted_amount_cents)
 
-        # Create transfer_in transaction
         Transaction.create!(
           wallet: to_wallet,
           transaction_type: 'transfer_in',
@@ -58,16 +58,14 @@ class TransferService
           idempotency_key: @idempotency_key
         )
 
-        # Mark transfer_out as completed
         transfer_out_transaction.update!(status: 'completed')
       end
 
       ServiceResult.new(success: true, data: transfer_out_transaction)
     rescue StandardError => e
-      # Record failure reason in metadata (consistent with deposit/withdraw)
       transfer_out_transaction.update!(
         status: 'failed',
-        metadata: { failure_reason: e.message, failed_at: Time.current }
+        failed_reason: e.message
       )
       ServiceResult.new(success: false, error: e.message)
     end
@@ -76,7 +74,7 @@ class TransferService
   def convert_currency(amount_cents, from_currency, to_currency)
     return amount_cents if from_currency == to_currency
 
-    # ThinkingProcess: Use Money gem for currency conversion
+    # KEY_POINT: Use Money gem for currency conversion
     from_money = Money.new(amount_cents, from_currency)
     converted_money = from_money.exchange_to(to_currency)
     converted_money.cents

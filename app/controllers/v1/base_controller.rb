@@ -8,8 +8,8 @@ module V1
 
     private
 
-    # ThinkingProcess: Simplified user authentication, for its not the focus of this project,
-    # for production, we could use more robust and secure authentication, like JWT, OAuth, etc.
+    # KEY_POINT: Simplified user authentication, for its not the focus of this project,
+    #            for production, we could use more robust and secure authentication, like JWT, OAuth, etc.
     def authenticate_user!
       api_key = request.headers['X-User-API-Key']
       @current_user = User.find_by(api_key: api_key)

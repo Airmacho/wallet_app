@@ -26,8 +26,8 @@ class DepositService
   def perform_deposit
     wallet = @user.wallet
 
-    # ThinkingProcess: This ensures failed transactions are recorded even when business logic fails,
-    # so we can audit the failed transactions.
+    # KEY_POINT: This ensures failed transactions are recorded even when business logic fails,
+    #            so we can audit the failed transactions.
     begin
       transaction = Transaction.create!(
         wallet: wallet,
@@ -43,7 +43,7 @@ class DepositService
 
     begin
       ActiveRecord::Base.transaction do
-        # ThinkingProcess: pessimistic locking the wallet to prevent race conditions from concurrent deposits.
+        # KEY_POINT: pessimistic locking the wallet to prevent race conditions from concurrent deposits.
         wallet.lock!
         wallet.deposit!(@amount_cents)
       end
@@ -53,7 +53,7 @@ class DepositService
     rescue StandardError => e
       transaction.update!(
         status: 'failed',
-        metadata: { failure_reason: e.message, failed_at: Time.current }
+        failed_reason: e.message
       )
       ServiceResult.new(success: false, error: e.message)
     end

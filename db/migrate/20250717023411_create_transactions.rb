@@ -9,7 +9,7 @@ class CreateTransactions < ActiveRecord::Migration[7.1]
       t.string :currency, null: false, default: 'USD'
       t.string :status, null: false, default: 'pending'
       t.string :idempotency_key
-      t.jsonb :metadata
+      t.string :failed_reason
 
       t.timestamps
     end

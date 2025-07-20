@@ -162,13 +162,13 @@ RSpec.describe WithdrawService do
 
     context 'when database transaction fails' do
       it 'marks transaction as failed when wallet withdrawal raises exception' do
-        allow_any_instance_of(Wallet).to receive(:withdraw!).and_raise(StandardError, 'Database error')
+        allow_any_instance_of(Wallet).to receive(:withdraw!).and_raise(StandardError, 'Insufficient funds')
         service = described_class.new(user: user, amount_cents: amount_cents, idempotency_key: idempotency_key)
 
         result = service.call
 
         expect(result.success?).to be false
-        expect(result.error).to eq('Database error')
+        expect(result.error).to eq('Insufficient funds')
         expect(wallet.reload.balance_cents).to eq(10_000)
 
         failed_transaction = Transaction.find_by(idempotency_key: idempotency_key)
@@ -176,8 +176,7 @@ RSpec.describe WithdrawService do
         expect(failed_transaction.status).to eq('failed')
         expect(failed_transaction.transaction_type).to eq('withdrawal')
         expect(failed_transaction.amount_cents).to eq(amount_cents)
-        expect(failed_transaction.metadata['failure_reason']).to eq('Database error')
-        expect(failed_transaction.metadata['failed_at']).to be_present
+        expect(failed_transaction.failed_reason).to eq('Insufficient funds')
       end
 
       it 'returns failure result when transaction creation fails' do
@@ -193,8 +192,8 @@ RSpec.describe WithdrawService do
 
     context 'when handling large withdrawal amounts' do
       it 'successfully processes large withdrawals within available balance' do
-        wallet.update!(balance_cents: 1_000_000_000)
-        large_amount = 999_999_999
+        wallet.update!(balance_cents: 1000000000)
+        large_amount = 999999999
         service = described_class.new(user: user, amount_cents: large_amount, idempotency_key: idempotency_key)
 
         result = service.call
@@ -238,7 +237,7 @@ RSpec.describe WithdrawService do
         failed_transaction = Transaction.find_by(idempotency_key: idempotency_key)
         if failed_transaction
           expect(failed_transaction.status).to eq('failed')
-          expect(failed_transaction.metadata['failure_reason']).to include('Insufficient balance')
+          expect(failed_transaction.failed_reason).to include('Insufficient balance')
         end
       end
     end
